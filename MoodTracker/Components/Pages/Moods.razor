@@ -1,0 +1,17 @@
+@page "/moods"
+@inject NavigationManager Nav
+
+<!-- Legacy route kept for backward compatibility. Immediately redirect to /diary. -->
+<PageTitle>Diary</PageTitle>
+<div class="p-3 text-muted small">Redirecting to Diary...</div>
+
+@code {
+    /// <summary>
+    /// On first render, navigate permanently to the new /diary page.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        // ForceLoad true ensures server-side navigation without relying on preserved circuit state.
+        Nav.NavigateTo("/diary", true);
+    }
+}

@@ -1,0 +1,287 @@
+@page "/diary"
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using Microsoft.AspNetCore.Components
+@using MoodTracker.Services
+
+<PageTitle>Diary</PageTitle>
+
+<div class="diary-shell">
+    <header class="diary-header">
+        <div class="diary-header-row">
+            <div class="diary-title-group">
+                <h1 class="diary-title">Diary</h1>
+                <span class="diary-month month-fade" aria-label="Current month" @key="MonthLabel">@MonthLabel</span>
+            </div>
+            <button type="button" class="add-entry-btn" @onclick="OpenAddModal" aria-label="Add diary entry">
+                <span class="add-icon" aria-hidden="true">＋</span>
+            </button>
+        </div>
+    <div class="week-bar week-fade" @key="weekStart">
+            <button type="button" class="week-nav-btn prev" aria-label="Previous week" @onclick="PrevWeek">‹</button>
+            <div class="calendar-week" role="group" aria-label="Current week">
+                @foreach (var day in WeekDays)
+                {
+                    var isSelected = day.Date == selectedDay;
+                    <button type="button" class="cal-day @(day.IsToday ? "today" : string.Empty) @(isSelected ? "selected" : string.Empty)" aria-pressed="@isSelected" aria-current="@(day.IsToday ? "date" : null)" @onclick="() => ChangeDay(day.Date)">
+                        <span class="dow">@day.Abbrev</span>
+                        <span class="dom">@day.Date.Day</span>
+                    </button>
+                }
+            </div>
+            <button type="button" class="week-nav-btn next" aria-label="Next week" @onclick="NextWeek">›</button>
+        </div>
+    </header>
+
+    @if (showAddModal)
+    {
+        <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="addEntryHeading">
+            <div class="modal-card">
+                <div class="modal-head">
+                    <h2 id="addEntryHeading" class="modal-title">Add Entry</h2>
+                    <button type="button" class="close-btn" aria-label="Close" @onclick="CloseAddModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="emoji-bar" role="list" aria-label="Select mood">
+                        @foreach (var mood in moodOptions)
+                        {
+                            var active = selectedMood == mood;
+                            <button type="button"
+                                    class="emoji-pill @(active ? "active" : string.Empty)"
+                                    @onclick="() => SelectMood(mood)"
+                                    aria-pressed="@active"
+                                    aria-label="@mood.Name">
+                                <span class="emoji" aria-hidden="true">@mood.Emoji</span>
+                            </button>
+                        }
+                    </div>
+                    <p class="emotions-title" id="emotionsLabel">Emotions</p>
+                    <div class="emotion-chips" aria-labelledby="emotionsLabel">
+                        @foreach (var chip in shuffledEmotionChips)
+                        {
+                            var chipActive = chip == selectedEmotion; 
+                            <button type="button"
+                                    class="chip-btn @(chipActive ? "active" : string.Empty)"
+                                    @onclick="() => SelectEmotion(chip)"
+                                    aria-pressed="@chipActive">@chip</button>
+                        }
+                    </div>
+                    @if (selectedMood is not null && !string.IsNullOrWhiteSpace(supportMessage))
+                    {
+                        <div class="support-note mt-2">@supportMessage</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="primary-add-btn" disabled="@(selectedMood is null)" @onclick="SaveEntry">Add Entry</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <section class="history-panel" aria-label="Recent diary entries">
+        <h2 class="visually-hidden">Recent entries</h2>
+        @if (!RecentEntries.Any())
+        {
+            <p class="text-muted small">No entries yet. Click the + button to add your first entry.</p>
+        }
+        else
+        {
+            @foreach (var entry in RecentEntries)
+            {
+                <article class="entry-card card-panel">
+                    <div class="entry-head">
+                        <div class="entry-emoji" aria-hidden="true">@entry.Mood.Emoji</div>
+                        <div class="entry-meta">
+                            <div class="entry-primary"><span class="entry-mood">@entry.Mood.Name</span> <time datetime="@entry.Timestamp.ToString("O")" class="entry-time text-muted">@entry.Timestamp.ToLocalTime().ToString("HH:mm")</time></div>
+                            @if (!string.IsNullOrWhiteSpace(entry.Emotion))
+                            {
+                                <div class="entry-emotion text-muted">@entry.Emotion</div>
+                            }
+                        </div>
+                        <span class="entry-tag">Personal</span>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(entry.Message))
+                    {
+                        <p class="entry-message">@entry.Message</p>
+                    }
+                </article>
+            }
+        }
+    </section>
+</div>
+
+@code {
+    private sealed record MoodOption(string Name, string Emoji, string Key, MoodSentiment Sentiment);
+    private enum MoodSentiment { Positive, Negative, Neutral }
+    private readonly MoodOption[] moodOptions =
+    [
+        new("Happy", "😄", "happy", MoodSentiment.Positive),
+        new("Sad", "😢", "sad", MoodSentiment.Negative),
+        new("Excited", "🤩", "excited", MoodSentiment.Positive),
+        new("Tired", "😴", "tired", MoodSentiment.Negative),
+        new("Calm", "😌", "calm", MoodSentiment.Positive)
+    ];
+    private static readonly string[] positiveMessages =
+    [
+        "Love that energy—keep it going!",
+        "You're radiating great vibes today.",
+        "Channel that mood into something awesome!",
+        "Keep the momentum—you're doing great.",
+        "That smile is your superpower today."
+    ];
+    private static readonly string[] negativeMessages =
+    [
+        "It's okay to feel this way—small steps count.",
+        "Be gentle with yourself; you matter.",
+        "Even tough moments pass—you're not alone.",
+        "Rest is productive—take what you need.",
+        "Your feelings are valid; brighter moments are coming."
+    ];
+    private static readonly string[] neutralMessages =
+    [
+        "Steady is a fine place to be.",
+        "A calm moment can recharge everything.",
+        "Use this space to reflect or plan something small.",
+        "Neutral today leaves room for surprise later.",
+        "A balanced mood sets a solid foundation."
+    ];
+    private MoodOption? selectedMood;
+    private string? supportMessage;
+    // Local projection for UI binding (combines repository entry + mood metadata)
+    private sealed record MoodEntryView(MoodOption Mood, DateTime Timestamp, string? Emotion, string? Message);
+    private readonly List<MoodEntryView> moodHistory = new();
+    private readonly string[] emotionChips = [
+        "Excited","Relaxed","Proud","Hopeful","Happy","Enthusiastic","Refreshed","Gloomy",
+        "Lonely","Anxious","Sad","Angry","Tired","Annoyed","Bored","Stressed"
+    ];
+    private string? selectedEmotion;
+    private List<string> shuffledEmotionChips = new();
+    private bool showAddModal;
+    private IEnumerable<MoodEntryView> RecentEntries => moodHistory; // Already filtered by date & ordered.
+    private sealed record WeekDay(DateOnly Date, string Abbrev, bool IsToday);
+    private DateOnly weekStart; // Always a Monday representing the visible week
+    private IEnumerable<WeekDay> WeekDays
+    {
+        get
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var culture = System.Globalization.CultureInfo.CurrentCulture;
+            return Enumerable.Range(0, 7)
+                .Select(i => weekStart.AddDays(i))
+                .Select(d => new WeekDay(d, culture.DateTimeFormat.AbbreviatedDayNames[(int)d.ToDateTime(TimeOnly.MinValue).DayOfWeek], d == today));
+        }
+    }
+    private void SelectMood(MoodOption mood)
+    { if (mood is null) { return; } selectedMood = mood; supportMessage = GenerateSupportMessage(mood); }
+    private void SelectEmotion(string chip) => selectedEmotion = chip == selectedEmotion ? null : chip;
+    [Inject] private IMoodEntryRepository Repository { get; set; } = default!;
+
+    private DateOnly selectedDay = DateOnly.FromDateTime(DateTime.Now);
+    protected override async Task OnInitializedAsync()
+    {
+        shuffledEmotionChips = emotionChips.OrderBy(_ => Random.Shared.Next()).ToList();
+        weekStart = GetWeekStart(selectedDay);
+        await LoadDayAsync(selectedDay);
+    }
+    private void OpenAddModal() { ResetDraft(); showAddModal = true; }
+    private void CloseAddModal() { showAddModal = false; }
+    private async Task SaveEntry()
+    {
+        if (selectedMood is null)
+        {
+            return;
+        }
+        var repoEntry = new MoodEntry(
+            Id: Guid.NewGuid(),
+            MoodKey: selectedMood.Key,
+            MoodName: selectedMood.Name,
+            Emoji: selectedMood.Emoji,
+            Sentiment: selectedMood.Sentiment.ToString(),
+            Emotion: selectedEmotion,
+            Message: supportMessage,
+            TimestampUtc: DateTime.UtcNow);
+        await Repository.AddAsync(repoEntry);
+    await LoadDayAsync(selectedDay);
+        CloseAddModal();
+    }
+    private void ResetDraft() { selectedMood = null; selectedEmotion = null; supportMessage = null; }
+    private async Task LoadDayAsync(DateOnly day)
+    {
+        var entries = await Repository.GetByDateAsync(day);
+        moodHistory.Clear();
+        foreach (var e in entries)
+        {
+            var mood = moodOptions.FirstOrDefault(m => m.Key == e.MoodKey) ?? new MoodOption(e.MoodName, e.Emoji, e.MoodKey, Enum.TryParse<MoodSentiment>(e.Sentiment, out var s) ? s : MoodSentiment.Neutral);
+            moodHistory.Add(new MoodEntryView(mood, e.TimestampUtc.ToLocalTime(), e.Emotion, e.Message));
+        }
+        StateHasChanged();
+    }
+
+    private async Task ChangeDay(DateOnly day)
+    {
+        if (day == selectedDay) { return; }
+        selectedDay = day;
+        // If user clicked a day outside the current visible week (possible after navigation via keyboard shortcuts in future), adjust weekStart.
+        if (day < weekStart || day >= weekStart.AddDays(7))
+        {
+            weekStart = GetWeekStart(day);
+        }
+        await LoadDayAsync(day);
+    }
+    private DateOnly GetWeekStart(DateOnly date)
+    {
+        // Convert to Monday-based week start
+        // DayOfWeek: Monday = 1 ... Sunday = 0
+        var dow = (int)date.ToDateTime(TimeOnly.MinValue).DayOfWeek;
+        // Adjust so Monday=0
+        int offset = dow == 0 ? 6 : dow - 1;
+        return date.AddDays(-offset);
+    }
+    private async Task PrevWeek()
+    {
+        weekStart = weekStart.AddDays(-7);
+        // Keep selected day within the newly visible week if it falls outside
+        if (selectedDay < weekStart || selectedDay >= weekStart.AddDays(7))
+        {
+            selectedDay = weekStart; // Jump selection to Monday of new week
+            await LoadDayAsync(selectedDay);
+        }
+        else
+        {
+            StateHasChanged();
+        }
+    }
+    private async Task NextWeek()
+    {
+        weekStart = weekStart.AddDays(7);
+        if (selectedDay < weekStart || selectedDay >= weekStart.AddDays(7))
+        {
+            selectedDay = weekStart;
+            await LoadDayAsync(selectedDay);
+        }
+        else
+        {
+            StateHasChanged();
+        }
+    }
+    private string MonthLabel => BuildMonthLabel();
+    private string BuildMonthLabel()
+    {
+        var start = weekStart;
+        var end = weekStart.AddDays(6);
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        string FormatMonthYear(DateOnly d) => d.ToDateTime(TimeOnly.MinValue).ToString("MMMM yyyy", culture);
+        string FormatMonthShort(DateOnly d) => d.ToDateTime(TimeOnly.MinValue).ToString("MMM", culture);
+        if (start.Month == end.Month && start.Year == end.Year)
+        {
+            return FormatMonthYear(start);
+        }
+        if (start.Year == end.Year)
+        {
+            return $"{FormatMonthShort(start)}–{FormatMonthYear(end)}"; // e.g., Aug–Sep 2025
+        }
+        return $"{FormatMonthShort(start)} {start.Year} – {FormatMonthShort(end)} {end.Year}"; // e.g., Dec 2025 – Jan 2026
+    }
+    private string GenerateSupportMessage(MoodOption mood)
+    { if (mood is null) { return string.Empty; } string[] pool = mood.Sentiment switch { MoodSentiment.Positive => positiveMessages, MoodSentiment.Negative => negativeMessages, _ => neutralMessages }; return pool.Length == 0 ? string.Empty : pool[Random.Shared.Next(pool.Length)]; }
+}
