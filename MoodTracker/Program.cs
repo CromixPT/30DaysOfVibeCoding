@@ -1,10 +1,15 @@
 using MoodTracker.Components;
+using MoodTracker.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// In-memory repository for diary entries (app-lifetime singleton).
+builder.Services.AddSingleton<IMoodEntryRepository>(_ => new InMemoryMoodEntryRepository(maxEntries: 2000));
+builder.Services.AddHostedService<MonthlySeedHostedService>();
 
 var app = builder.Build();
 

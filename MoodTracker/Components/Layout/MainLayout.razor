@@ -1,23 +1,95 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+<div class="layout-root @(navOpen ? "nav-open" : string.Empty)">
+    <!-- Sidebar -->
+    <aside class="app-sidebar" aria-label="Primary navigation" tabindex="-1">
+        <div class="brand-row">
+            <div class="brand-mark" aria-hidden="true">🙂</div>
+            <div class="brand-text">MoodTracker</div>
+            <button class="close-nav" @onclick="ToggleNav" aria-label="Close navigation">×</button>
         </div>
+        <NavMenu />
+        <div class="sidebar-footer">
+            <a href="https://learn.microsoft.com/aspnet/core" target="_blank" rel="noopener" class="about-link">Docs</a>
+        </div>
+    </aside>
+    <div class="nav-overlay" role="button" aria-label="Close navigation" @onclick="ToggleNav"></div>
 
-        <article class="content px-4">
+    <!-- Main content area -->
+    <div class="main-shell">
+        <header class="app-topbar">
+            <button class="nav-toggle" @onclick="ToggleNav" aria-label="Toggle navigation" aria-expanded="@navOpen">☰</button>
+            <div class="topbar-title">@currentTitle</div>
+            <div class="topbar-spacer"></div>
+        </header>
+        <main class="content-surface">
             @Body
-        </article>
-    </main>
+        </main>
+    </div>
 </div>
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
-</div>
+    </div>
+
+@code {
+    // Tracks whether the navigation sidebar is open on small screens.
+    private bool navOpen;
+    // Simple placeholder for dynamic page title resolution (could inspect route data later).
+    private string currentTitle = "";
+
+    [Inject] private NavigationManager Nav { get; set; } = default!; // For detecting route changes to auto-close nav.
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to navigation events so we can close the drawer when the route changes (mobile UX expectation).
+        Nav.LocationChanged += HandleLocationChanged;
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (navOpen)
+        {
+            navOpen = false;
+            // Trigger re-render since this might be outside user click context.
+            InvokeAsync(StateHasChanged);
+        }
+    UpdateTitle(e.Location);
+    }
+
+    private void ToggleNav()
+    {
+        navOpen = !navOpen;
+    }
+
+    private void UpdateTitle(string? uri = null)
+    {
+        uri ??= Nav.Uri;
+        // Very lightweight mapping; could be replaced with route data inspection later.
+        if (uri.Contains("/diary", StringComparison.OrdinalIgnoreCase))
+        {
+            currentTitle = "Diary";
+        }
+        else
+        {
+            currentTitle = ""; // Home or unknown – keep minimal.
+        }
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            UpdateTitle();
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= HandleLocationChanged;
+    }
+}

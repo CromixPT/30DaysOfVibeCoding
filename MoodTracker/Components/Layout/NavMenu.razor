@@ -1,30 +1,17 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">MoodTracker</a>
-    </div>
-</div>
-
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
+﻿<nav class="nav-groups" aria-label="Main navigation">
+    <ul class="nav-list">
+        <li>
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <span class="nav-icon bi-house-door-fill-nav-menu" aria-hidden="true"></span>
+                <span class="nav-text">Home</span>
             </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+        </li>
+        <li>
+            <NavLink class="nav-link" href="diary">
+                <span class="nav-icon bi-emoji-smile-fill-nav-menu" aria-hidden="true"></span>
+                <span class="nav-text">Diary</span>
             </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
-</div>
+        </li>
+    </ul>
+</nav>
 

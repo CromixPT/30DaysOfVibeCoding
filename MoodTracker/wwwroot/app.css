@@ -1,5 +1,21 @@
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    /* Subtle, desaturated backdrop with faint radial highlight instead of vivid banded gradient */
+    background:
+        radial-gradient(circle at 35% 20%, rgba(255,255,255,0.85), rgba(255,255,255,0) 60%),
+        linear-gradient(145deg,#eef2f6 0%, #e6edf3 40%, #dde7ef 100%);
+    min-height: 100vh;
+    color: #222;
+}
+
+/* Overlay subtle noise / softness (optional future enhancement) */
+
+:root {
+    --brand-grad: linear-gradient(90deg,#ffb347 0%, #ff9f73 50%, #ffa94d 100%); /* softer warm accent kept for any reused elements */
+    --brand-dark: #0d0f14;
+    --panel-bg: rgba(255,255,255,0.80);
+    --panel-border: rgba(255,255,255,0.35);
+    --glass-blur: 18px;
 }
 
 a, .btn-link {
@@ -19,6 +35,60 @@ a, .btn-link {
 .content {
     padding-top: 1.1rem;
 }
+
+/* Glass panel utility for content areas */
+.glass-panel {
+    background: var(--panel-bg);
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--panel-border);
+    border-radius: 1.25rem;
+    box-shadow: 0 10px 28px -12px rgba(0,0,0,0.25), 0 3px 8px -4px rgba(0,0,0,0.25);
+}
+
+/* Hero Banner */
+.hero-banner {
+    position: relative;
+    border-radius: 1.75rem;
+    padding: clamp(2.5rem,5vw,4rem) clamp(1.5rem,4vw,3rem);
+    background: var(--brand-grad);
+    overflow: hidden;
+    color: #fff;
+    box-shadow: 0 18px 42px -18px rgba(0,0,0,.4), 0 4px 12px -4px rgba(0,0,0,.3);
+}
+.hero-banner:before,
+.hero-banner:after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 15% 25%,rgba(255,255,255,.25),transparent 60%),
+                radial-gradient(circle at 85% 65%,rgba(255,255,255,.25),transparent 60%);
+    mix-blend-mode: overlay;
+    pointer-events: none;
+}
+.hero-title { font-size: clamp(2.2rem,6.2vw,4.2rem); font-weight: 800; line-height: 1.05; letter-spacing: -1px; }
+.hero-sub { font-size: clamp(1.1rem,2.2vw,1.85rem); font-weight: 600; margin-top: .75rem; }
+
+/* Mood buttons new style (shared) */
+.mood-btn {
+    background: rgba(255,255,255,0.55);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.45);
+    color: #222;
+    font-weight: 600;
+}
+.mood-btn.active {
+    background: #fff;
+    color: #111;
+    box-shadow: 0 0 0 .18rem rgba(255,255,255,0.55), 0 6px 18px -6px rgba(0,0,0,.35);
+}
+.mood-btn:hover:not(.active) {
+    background: rgba(255,255,255,0.75);
+}
+
+/* Support message styling */
+.support-msg { font-size: 1.05rem; font-weight: 500; }
 
 h1:focus {
     outline: none;
@@ -49,3 +119,62 @@ h1:focus {
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
 }
+
+/* Custom rounding utilities */
+.rounded-4 { border-radius: 1rem !important; }
+.rounded-pill-sm { border-radius: 2rem !important; }
+
+/* Softer shadow option for elevated elements */
+.shadow-soft { box-shadow: 0 4px 18px -6px rgba(0,0,0,0.15), 0 2px 4px -2px rgba(0,0,0,0.08); }
+
+/* Input group integration tweaks */
+.input-group.rounded-4 > .form-control { border-top-left-radius: 1rem; border-bottom-left-radius: 1rem; }
+.input-group.rounded-4 > .btn:last-child { border-top-right-radius: 1rem; border-bottom-right-radius: 1rem; }
+
+/* Sticker styles (updated) */
+.sticker {
+    position: relative;
+    border-radius: 0.85rem;
+    padding: 1.15rem .9rem 1.05rem .9rem;
+    box-shadow: 0 6px 14px -6px rgba(0,0,0,0.25), 0 2px 4px -2px rgba(0,0,0,0.12);
+    min-height: 120px;
+    width: 180px; /* narrower */
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: left;
+    font-weight: 500;
+    line-height: 1.25;
+    isolation: isolate;
+    transition: transform .25s ease, box-shadow .25s ease;
+    overflow-wrap: anywhere;
+}
+.sticker:before { content: none; } /* Removed striped overlay */
+.sticker:hover {
+    transform: scale(1.02) rotate(0deg) translateY(-2px);
+    box-shadow: 0 10px 20px -10px rgba(0,0,0,0.35), 0 4px 6px -2px rgba(0,0,0,0.18);
+}
+.sticker-pin {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    transform: none;
+    width: 14px;
+    height: 14px;
+    background: radial-gradient(circle at 35% 35%, #fffc, #c33 60%);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+    z-index: 2;
+}
+
+/* Pastel color variants */
+.sticker-pastel-1 { background: #FFF9C4; }
+.sticker-pastel-2 { background: #FFE0B2; }
+.sticker-pastel-3 { background: #FFCDD2; }
+.sticker-pastel-4 { background: #E1BEE7; }
+.sticker-pastel-5 { background: #C5CAE9; }
+.sticker-pastel-6 { background: #B2EBF2; }
+.sticker-pastel-7 { background: #C8E6C9; }
+.sticker-pastel-8 { background: #DCEDC8; }
+
+/* Rotation helper applied inline via style attribute (randomized per item) */
