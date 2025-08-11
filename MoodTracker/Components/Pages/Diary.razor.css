@@ -1,7 +1,9 @@
 /* Diary style layout */
-.diary-shell { max-width: 680px; margin: 0 auto; }
-.diary-header { display:flex; flex-direction:column; gap:.75rem; margin-bottom:1.25rem; }
-.diary-header-row { display:flex; justify-content:space-between; align-items:center; }
+.diary-shell { max-width: 680px; margin: 0 auto; padding:0 1rem; }
+/* Center header content while keeping vertical rhythm */
+.diary-header { display:flex; flex-direction:column; gap:.75rem; margin-bottom:1.25rem; align-items:center; text-align:center; }
+/* Center all child items; allow wrapping so + button drops below on very narrow screens */
+.diary-header-row { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:1rem; width:100%; }
 .add-entry-btn { background:linear-gradient(145deg,#ffb347,#ffa63d); color:#fff; width:3rem; height:3rem; border:none; border-radius:1rem; display:flex; align-items:center; justify-content:center; font-weight:600; box-shadow:0 10px 22px -10px rgba(255,154,38,.6),0 4px 10px -4px rgba(255,154,38,.4); transition:transform .22s ease, box-shadow .22s ease; padding:0; }
 .add-entry-btn .add-icon { font-size:1.55rem; line-height:1; }
 .add-entry-btn:hover { transform:translateY(-3px); box-shadow:0 14px 28px -12px rgba(255,154,38,.65),0 6px 14px -6px rgba(255,154,38,.45); }
@@ -14,7 +16,7 @@
 .diary-title-group { display:flex; align-items:baseline; gap:.75rem; }
 .diary-title { font-size:2rem; font-weight:700; margin:0; }
 .diary-month { text-transform:lowercase; font-weight:600; font-size:1rem; color:#6c737f; }
-.week-bar { display:flex; align-items:center; gap:.5rem; }
+.week-bar { display:flex; align-items:center; justify-content:center; gap:.5rem; flex-wrap:nowrap; }
 .calendar-week { display:grid; grid-template-columns:repeat(7,1fr); gap:.4rem; flex:1; }
 .week-nav-btn { background:#fff; border:1px solid #e4e8ee; color:#6b737c; width:2.1rem; height:2.1rem; border-radius:.75rem; font-size:1.15rem; display:flex; align-items:center; justify-content:center; line-height:1; cursor:pointer; transition:background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease; box-shadow:0 2px 6px -2px rgba(0,0,0,.08); }
 .week-nav-btn:hover { background:#f3f6f8; color:#394047; }
@@ -53,7 +55,19 @@
 /* Support note */
 .support-note { margin-top:1rem; background:#fff7e6; border:1px solid #ffe2ad; padding:.75rem .9rem; border-radius:.85rem; font-size:.85rem; line-height:1.25; color:#7a5313; }
 /* History */
-.history-panel { margin-top:1.75rem; display:flex; flex-direction:column; gap:1rem; }
+.history-panel { margin-top:1.75rem; display:flex; flex-direction:column; gap:1rem; align-items:center; text-align:center; }
+.entry-card { width:100%; }
+
+/* On wider screens keep cards left-aligned inside centered shell for readability */
+@media (min-width: 640px) {
+	.history-panel { text-align:left; align-items:stretch; }
+}
+
+/* Ensure calendar grid stays centered */
+.calendar-week { margin:0 auto; }
+
+/* Keep title & month together centered */
+.diary-title-group { justify-content:center; }
 .entry-card { display:flex; flex-direction:column; gap:.65rem; }
 .entry-head { display:flex; align-items:flex-start; gap:.9rem; position:relative; }
 .entry-emoji { font-size:2rem; line-height:1; }
