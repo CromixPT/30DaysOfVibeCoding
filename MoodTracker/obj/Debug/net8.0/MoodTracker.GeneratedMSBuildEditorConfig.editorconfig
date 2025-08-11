@@ -53,3 +53,11 @@ build_metadata.AdditionalFiles.CssScope = b-foxhgoqtye
 [C:/repos/MyPlayground/30DaysOfVibeCoding/MoodTracker/Components/Layout/NavMenu.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTmF2TWVudS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-xdk7vm3smr
+
+[C:/repos/MyPlayground/30DaysOfVibeCoding/MoodTracker/Components/Pages/Diary.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEaWFyeS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-muzpnxqsim
+
+[C:/repos/MyPlayground/30DaysOfVibeCoding/MoodTracker/Components/Pages/Moods.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNb29kcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-c05ngh7utk

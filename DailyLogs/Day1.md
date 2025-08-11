@@ -29,7 +29,7 @@ Goal: Build the foundation of a simple Mood Tracker using Blazor in Visual Studi
 
 ## Challenges
 
-> To fill after reflection
+- CoPilot had some issues with Blazor Render modes. Just asking to have behaviour like adding an item to the list was proving dificult. Had to be more specific and go step by step.
 
 ## Lessons Learned
 
