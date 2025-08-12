@@ -47,4 +47,14 @@ public sealed class InMemoryMoodEntryRepository : IMoodEntryRepository
             .ToArray();
         return Task.FromResult<IReadOnlyList<MoodEntry>>(target);
     }
+
+    public Task<IReadOnlyList<MoodEntry>> GetRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+    {
+        var snapshot = entries.ToArray();
+        var target = snapshot
+            .Where(e => e.TimestampUtc >= fromUtc && e.TimestampUtc < toUtc)
+            .OrderByDescending(e => e.TimestampUtc)
+            .ToArray();
+        return Task.FromResult<IReadOnlyList<MoodEntry>>(target);
+    }
 }

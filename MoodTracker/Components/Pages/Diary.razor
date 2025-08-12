@@ -371,26 +371,27 @@
     private async Task LoadMonthAsync(DateOnly monthStart)
     {
         monthEntries.Clear();
-        int daysInMonth = DateTime.DaysInMonth(monthStart.Year, monthStart.Month);
-        for (int day = 1; day <= daysInMonth; day++)
+        // Single range query for the entire month (inclusive start, exclusive end) to avoid 1 query per day.
+        var rangeStartUtc = monthStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var nextMonth = monthStart.AddMonths(1);
+        var rangeEndUtc = nextMonth.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var entries = await Repository.GetRangeAsync(rangeStartUtc, rangeEndUtc);
+
+        var groups = entries
+            .GroupBy(e => DateOnly.FromDateTime(e.TimestampUtc))
+            .OrderBy(g => g.Key); // chronological grouping (per-day ordering handled below)
+
+        foreach (var g in groups)
         {
-            var date = new DateOnly(monthStart.Year, monthStart.Month, day);
-            var entries = await Repository.GetByDateAsync(date);
-            foreach (var e in entries)
+            var date = g.Key;
+            var list = new List<MoodEntryView>();
+            foreach (var e in g.OrderByDescending(x => x.TimestampUtc))
             {
                 var mood = moodOptions.FirstOrDefault(m => m.Key == e.MoodKey) ?? new MoodOption(e.MoodName, e.Emoji, e.MoodKey, Enum.TryParse<MoodSentiment>(e.Sentiment, out var s) ? s : MoodSentiment.Neutral);
                 var sentiment = Enum.TryParse<MoodSentiment>(e.Sentiment, out var ms) ? ms : MoodSentiment.Neutral;
-                if (!monthEntries.TryGetValue(date, out var list))
-                {
-                    list = new List<MoodEntryView>();
-                    monthEntries[date] = list;
-                }
                 list.Add(new MoodEntryView(mood, e.TimestampUtc.ToLocalTime(), e.Emotion, e.Message, sentiment));
             }
-            if (monthEntries.TryGetValue(date, out var orderList))
-            {
-                monthEntries[date] = orderList.OrderByDescending(e => e.Timestamp).ToList();
-            }
+            monthEntries[date] = list;
         }
         StateHasChanged();
     }

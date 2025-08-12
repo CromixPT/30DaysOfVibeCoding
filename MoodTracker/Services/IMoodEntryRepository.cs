@@ -19,6 +19,17 @@ public interface IMoodEntryRepository
 
     /// <summary>Return entries for the specified local date (newest first).</summary>
     Task<IReadOnlyList<MoodEntry>> GetByDateAsync(DateOnly date, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Return all entries whose UTC timestamp falls within the inclusive <paramref name="fromUtc"/> (>=) and exclusive <paramref name="toUtc"/> (<) range.
+    /// Caller is responsible for any grouping/ordering beyond the returned default ordering (newest first).
+    /// </summary>
+    /// <param name="fromUtc">Inclusive range start (UTC).</param>
+    /// <param name="toUtc">Exclusive range end (UTC).</param>
+    /// <remarks>
+    /// Added to eliminate N+1 query patterns when loading week/month calendar views. Optimizes database round-trips by fetching a contiguous block in one query.
+    /// </remarks>
+    Task<IReadOnlyList<MoodEntry>> GetRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
