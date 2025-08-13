@@ -1,0 +1,194 @@
+@page "/dashboards"
+@using MoodTracker.Services
+@inject IMoodEntryRepository Repository
+
+<div class="dash-shell">
+    <header class="dash-header">
+        <h1 class="dash-title">Dashboards</h1>
+        <p class="dash-sub text-muted">Data quality &amp; mood insights overview</p>
+    </header>
+
+    <section class="kpi-row" aria-label="Key metrics">
+        <div class="kpi-card">
+            <span class="kpi-value">@TotalEntries</span>
+            <span class="kpi-label">Entries</span>
+        </div>
+        <div class="kpi-card">
+            <span class="kpi-value">@UnderSelectedCount</span>
+            <span class="kpi-label">Filtered</span>
+        </div>
+        <div class="kpi-card">
+            <span class="kpi-value">@PositivePercent.ToString("0%")</span>
+            <span class="kpi-label">Positive</span>
+        </div>
+        <div class="kpi-card">
+            <span class="kpi-value">@CurrentStreak</span>
+            <span class="kpi-label">Day Streak</span>
+        </div>
+    </section>
+
+    <section class="filter-bar" aria-label="Dashboard filters">
+        <div class="filter-group">
+            <label for="periodSelect">Period</label>
+            <select id="periodSelect" @onchange="OnPeriodChanged" value="@SelectedPeriodDays">
+                @foreach (var p in PeriodOptions)
+                {
+                    <option value="@p" selected="@(p==SelectedPeriodDays)">@FormatPeriod(p)</option>
+                }
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="sentimentSelect">Sentiment</label>
+            <select id="sentimentSelect" @onchange="OnSentimentChanged" value="@SelectedSentiment">
+                @foreach (var s in SentimentOptions)
+                {
+                    <option value="@s" selected="@(s==SelectedSentiment)">@s</option>
+                }
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="moodSelect">Mood</label>
+            <select id="moodSelect" @onchange="OnMoodChanged" value="@SelectedMoodKey">
+                <option value="">All</option>
+                @foreach (var m in MoodKeys)
+                {
+                    <option value="@m" selected="@(m==SelectedMoodKey)">@m</option>
+                }
+            </select>
+        </div>
+        <button type="button" class="filter-reset" @onclick="ResetFilters" disabled="@(!CanReset)">Reset</button>
+    </section>
+
+    <section class="panel-grid" aria-label="Dashboard panels">
+    <div class="panel chart" aria-labelledby="p-matrix-h">
+            <h3 id="p-matrix-h" class="panel-title">Mood Distribution</h3>
+            <div class="panel-body">
+                <MoodDistributionChart Entries="FilteredEntries" />
+            </div>
+        </div>
+    <div class="panel chart" aria-labelledby="p-trend-h">
+            <h3 id="p-trend-h" class="panel-title">Sentiment Trend</h3>
+            <div class="panel-body">
+                <SentimentTrendChart Entries="FilteredEntries" />
+            </div>
+        </div>
+    <div class="panel chart" aria-labelledby="p-top-h">
+            <h3 id="p-top-h" class="panel-title">Top Emotions</h3>
+            <div class="panel-body">
+                <TopEmotionsChart Entries="FilteredEntries" />
+            </div>
+        </div>
+    <div class="panel chart" aria-labelledby="p-streak-h">
+            <h3 id="p-streak-h" class="panel-title">Streak Timeline</h3>
+            <div class="panel-body">
+                <StreakTimelineChart Entries="FilteredEntries" PeriodDays="@SelectedPeriodDays" />
+            </div>
+        </div>
+        <div class="panel wide" aria-labelledby="p-table-h">
+            <h3 id="p-table-h" class="panel-title">Recent Entries (@FilteredEntries.Count)</h3>
+            <div class="panel-body table-scroll">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Time (UTC)</th><th>Mood</th><th>Sentiment</th><th>Emotion</th><th>Message</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in FilteredEntries.Take(50))
+                        {
+                            <tr>
+                                <td>@e.TimestampUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>@e.MoodName (@e.Emoji)</td>
+                                <td class="sentiment @e.Sentiment.ToLowerInvariant()">@e.Sentiment</td>
+                                <td>@e.Emotion</td>
+                                <td>@(string.IsNullOrWhiteSpace(e.Message)?"—":Truncate(e.Message,60))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    private IReadOnlyList<MoodEntry> allRangeEntries = Array.Empty<MoodEntry>();
+    private List<MoodEntry> FilteredEntries { get; set; } = new();
+    private int TotalEntries; // overall repository count
+    private int UnderSelectedCount => FilteredEntries.Count;
+    private double PositivePercent => FilteredEntries.Count == 0 ? 0 : FilteredEntries.Count(e => e.Sentiment.Equals("Positive", StringComparison.OrdinalIgnoreCase)) / (double)FilteredEntries.Count;
+    private int CurrentStreak;
+
+    private int SelectedPeriodDays = 30;
+    private string SelectedSentiment = "All";
+    private string? SelectedMoodKey;
+    private readonly int[] PeriodOptions = new[] { 7, 30, 90 };
+    private readonly string[] SentimentOptions = new[] { "All", "Positive", "Negative", "Neutral" };
+    private readonly HashSet<string> MoodKeys = new(StringComparer.OrdinalIgnoreCase);
+    private bool CanReset => SelectedPeriodDays != 30 || SelectedSentiment != "All" || !string.IsNullOrEmpty(SelectedMoodKey);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPeriodAsync();
+    }
+
+    private async Task LoadPeriodAsync()
+    {
+        var end = DateTime.UtcNow;
+        var start = end.AddDays(-SelectedPeriodDays);
+        allRangeEntries = await Repository.GetRangeAsync(start, end);
+        TotalEntries = await Repository.CountAsync();
+        MoodKeys.Clear();
+        foreach (var k in allRangeEntries.Select(e => e.MoodKey).Distinct(StringComparer.OrdinalIgnoreCase)) MoodKeys.Add(k);
+        ApplyFilters();
+        ComputeStreak();
+        StateHasChanged();
+    }
+
+    private void ApplyFilters()
+    {
+        IEnumerable<MoodEntry> q = allRangeEntries;
+        if (SelectedSentiment != "All") q = q.Where(e => e.Sentiment.Equals(SelectedSentiment, StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrEmpty(SelectedMoodKey)) q = q.Where(e => e.MoodKey.Equals(SelectedMoodKey, StringComparison.OrdinalIgnoreCase));
+        FilteredEntries = q.OrderByDescending(e => e.TimestampUtc).ToList();
+    }
+
+    private void ComputeStreak()
+    {
+        // Consecutive days with at least one entry ending today.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var set = new HashSet<DateOnly>(allRangeEntries.Select(e => DateOnly.FromDateTime(e.TimestampUtc)));
+        int streak = 0;
+        var cursor = today;
+        while (set.Contains(cursor)) { streak++; cursor = cursor.AddDays(-1); }
+        CurrentStreak = streak;
+    }
+
+    private async Task OnPeriodChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var days) && days > 0)
+        {
+            SelectedPeriodDays = days;
+            await LoadPeriodAsync();
+        }
+    }
+    private Task OnSentimentChanged(ChangeEventArgs e)
+    {
+        SelectedSentiment = e.Value?.ToString() ?? "All";
+        ApplyFilters();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+    private Task OnMoodChanged(ChangeEventArgs e)
+    {
+        SelectedMoodKey = string.IsNullOrWhiteSpace(e.Value?.ToString()) ? null : e.Value!.ToString();
+        ApplyFilters();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+    private async Task ResetFilters()
+    {
+        SelectedPeriodDays = 30; SelectedSentiment = "All"; SelectedMoodKey = null;
+        await LoadPeriodAsync();
+    }
+    private string FormatPeriod(int d) => d == 7 ? "Last 7d" : d == 30 ? "Last 30d" : d + "d";
+    private static string Truncate(string? value, int max) => string.IsNullOrWhiteSpace(value) || value.Length <= max ? value ?? string.Empty : value[..(max-1)] + "…";
+}

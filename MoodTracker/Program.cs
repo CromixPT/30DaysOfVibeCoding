@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using MoodTracker.Components;
-using MoodTracker.Services;
+using MoodTracker.Services; // IMoodEntryRepository
+using MoodTracker.Infrastructure; // EF Core persistence layer
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,9 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// In-memory repository for diary entries (app-lifetime singleton).
-builder.Services.AddSingleton<IMoodEntryRepository>(_ => new InMemoryMoodEntryRepository(maxEntries: 2000));
-builder.Services.AddHostedService<MonthlySeedHostedService>();
+// Configure EF Core with SQLite (scoped DbContext per request) – standard pattern.
+var connectionString = builder.Configuration.GetConnectionString("Diary") ?? "Data Source=diary.db"; // fallback for safety
+builder.Services.AddDbContext<MoodTrackerDbContext>(options => options.UseSqlite(connectionString));
+
+// Repository abstraction (scoped per request since DbContext is scoped).
+builder.Services.AddScoped<IMoodEntryRepository, EfMoodEntryRepository>();
 
 var app = builder.Build();
 

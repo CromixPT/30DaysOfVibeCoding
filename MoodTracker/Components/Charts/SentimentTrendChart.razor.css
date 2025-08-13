@@ -1,0 +1,8 @@
+.sentiment-trend.chart-wrapper { width:100%; display:flex; flex-direction:column; gap:.4rem; align-items:center; }
+.trend-svg { width:220px; height:220px; }
+.mini-legend { display:flex; gap:.6rem; flex-wrap:wrap; font-size:.6rem; align-items:center; justify-content:center; }
+.mini-legend .swatch { width:14px; height:8px; border-radius:2px; display:inline-block; }
+.mini-legend .swatch.pos { background:linear-gradient(90deg,#1d8437,#3baf59); }
+.mini-legend .swatch.neu { background:linear-gradient(90deg,#888,#bbb); }
+.mini-legend .swatch.neg { background:linear-gradient(90deg,#b52d2d,#e04f4f); }
+.mini-legend .leg-label { margin-right:.4rem; }
