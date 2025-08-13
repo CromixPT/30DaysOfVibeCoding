@@ -1,0 +1,13 @@
+.top-emotions.chart-wrapper { width:100%; display:flex; flex-direction:column; gap:.4rem; }
+.top-emotions .emotion-svg { width:100%; height:100%; overflow:visible; font-family:inherit; }
+.top-emotions .bar-group { cursor:default; }
+.top-emotions .bar-bg { fill:#f3f5f7; }
+.top-emotions .bar-fill { filter:drop-shadow(0 1px 2px rgba(0,0,0,.15)); transition:filter .2s ease; }
+.top-emotions .bar-fill:hover { filter:brightness(1.06) drop-shadow(0 2px 4px rgba(0,0,0,.18)); }
+.top-emotions text { font-size:.55rem; dominant-baseline:middle; fill:#2d3439; }
+.top-emotions text.label { font-weight:600; letter-spacing:.3px; text-transform:capitalize; }
+.top-emotions text.value { font-weight:600; fill:#222; }
+.top-emotions .axis-line { stroke:#d8dde2; stroke-width:1; }
+.top-emotions .tick { stroke:#d8dde2; stroke-width:1; }
+.top-emotions .tick-label { fill:#6a737c; font-size:.5rem; }
+.top-emotions .empty-note { font-size:.6rem; color:#6a737c; font-style:italic; }

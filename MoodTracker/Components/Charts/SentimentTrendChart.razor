@@ -1,0 +1,135 @@
+@using MoodTracker.Services
+@inherits ComponentBase
+@namespace MoodTracker.Components.Charts
+
+@* Sentiment Trend Line Chart
+   - Maps Positive=1, Neutral=0, Negative=-1 then computes daily average.
+   - Renders accessible SVG line + area fill without external JS libs.
+   - Automatically adapts to number of days (compressed x spacing).
+*@
+
+<div class="sentiment-trend chart-wrapper">
+    @if (points.Count < 2)
+    {
+        <div class="empty-note">Not enough data to plot a trend.</div>
+    }
+    else
+    {
+        <svg class="trend-svg" viewBox="0 0 @chartWidth @chartHeight" role="img" aria-label="Daily average sentiment trend (-1 negative to +1 positive)">
+            <title>Sentiment trend</title>
+            <defs>
+                <linearGradient id="sentimentFill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="hsl(145,60%,65%)" stop-opacity="0.55" />
+                    <stop offset="50%" stop-color="hsl(210,15%,85%)" stop-opacity="0.35" />
+                    <stop offset="100%" stop-color="hsl(8,70%,60%)" stop-opacity="0.50" />
+                </linearGradient>
+            </defs>
+            @* Axes *@
+            <g class="axes" stroke="#cfd6dd" stroke-width="1">
+                <line x1="@left" y1="@midY" x2="@xEnd" y2="@midY" /> @* zero line *@
+                <line x1="@left" y1="@top" x2="@xEnd" y2="@top" stroke-dasharray="4 4" />
+                <line x1="@left" y1="@yBottom" x2="@xEnd" y2="@yBottom" stroke-dasharray="4 4" />
+            </g>
+            <g class="labels" font-size="12" fill="#59626b" font-weight="500">
+                <text x="@(left-30)" y="@(top+4)">+1</text>
+                <text x="@(left-26)" y="@(midY+4)">0</text>
+                <text x="@(left-30)" y="@(yBottom+4)">-1</text>
+            </g>
+            @* Area fill *@
+            <path d="@areaPath" fill="url(#sentimentFill)" stroke="none" />
+            @* Trend line *@
+            <path d="@linePath" fill="none" stroke="url(#gradLine)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+            <defs>
+                <linearGradient id="gradLine" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0%" stop-color="#b52d2d" />
+                    <stop offset="50%" stop-color="#888" />
+                    <stop offset="100%" stop-color="#1d8437" />
+                </linearGradient>
+            </defs>
+            @* Data points (optional) *@
+            <g fill="#2d3439" class="pt-group">
+                @foreach (var p in points)
+                {
+                    <circle cx="@p.X" cy="@p.Y" r="3" fill="#2d3439" />
+                }
+            </g>
+        </svg>
+        <div class="mini-legend" aria-label="Legend">
+            <span class="swatch pos"></span><span class="leg-label">Positive</span>
+            <span class="swatch neu"></span><span class="leg-label">Neutral</span>
+            <span class="swatch neg"></span><span class="leg-label">Negative</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IEnumerable<MoodEntry> Entries { get; set; } = Enumerable.Empty<MoodEntry>();
+
+    private readonly List<(double X, double Y)> points = new();
+    private string linePath = string.Empty;
+    private string areaPath = string.Empty;
+
+    // Layout metrics (dynamic so we can enlarge chart cleanly)
+    // Sized down to align with Mood Distribution chart (square ~220px)
+    private double chartWidth = 220;
+    private double chartHeight = 220;
+    private double left = 40, right = 14, top = 28, bottom = 32;
+    private double midY, usableW, amp, xEnd, yBottom;
+
+    protected override void OnParametersSet()
+    {
+        points.Clear();
+        linePath = string.Empty;
+        areaPath = string.Empty;
+    var grouped = Entries
+            .GroupBy(e => DateOnly.FromDateTime(e.TimestampUtc))
+            .OrderBy(g => g.Key)
+            .ToList();
+        if (grouped.Count == 0)
+        {
+            return;
+        }
+        // Compute daily average score.
+        static int Score(string s) => s.Equals("Positive", StringComparison.OrdinalIgnoreCase) ? 1 : s.Equals("Negative", StringComparison.OrdinalIgnoreCase) ? -1 : 0;
+        var daily = grouped.Select(g => new { g.Key, Avg = g.Average(e => Score(e.Sentiment)) }).ToList();
+        if (daily.Count < 2)
+        {
+            // Need at least two points to form a line.
+            return;
+        }
+    // Compute layout metrics (zero line in middle, +/-1 at bounds)
+    midY = (chartHeight - top - bottom) / 2 + top;
+    usableW = chartWidth - left - right;
+    amp = (chartHeight - top - bottom) / 2; // for +/-1 range
+    xEnd = chartWidth - right;
+    yBottom = chartHeight - bottom;
+        for (int i = 0; i < daily.Count; i++)
+        {
+            var x = left + (usableW * (daily.Count == 1 ? 0 : (double)i / (daily.Count - 1)));
+            var y = midY - (daily[i].Avg * amp);
+            points.Add((x, y));
+        }
+        // Build line path (simple polyline path) + area path down to zero line
+        var sbLine = new System.Text.StringBuilder();
+        var sbArea = new System.Text.StringBuilder();
+        for (int i = 0; i < points.Count; i++)
+        {
+            var (x, y) = points[i];
+            if (i == 0)
+            {
+                sbLine.Append($"M {x:F2} {y:F2}");
+                sbArea.Append($"M {x:F2} {midY:F2} L {x:F2} {y:F2}");
+            }
+            else
+            {
+                sbLine.Append($" L {x:F2} {y:F2}");
+                sbArea.Append($" L {x:F2} {y:F2}");
+            }
+        }
+        // Close area path back to baseline
+    var lastX = points[^1].X;
+    sbArea.Append($" L {lastX:F2} {midY:F2} Z");
+        linePath = sbLine.ToString();
+        areaPath = sbArea.ToString();
+    }
+}

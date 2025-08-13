@@ -35,9 +35,9 @@
 .content-surface { padding:1.25rem 1.85rem 2.25rem; flex:1; }
 @media (max-width: 860px){ .content-surface { padding:1.05rem 1.1rem 2rem; } }
 
-/* Constrain very wide screens for readability */
+/* Full-width content surface to allow wide dashboards */
 .content-surface > *:first-child { margin-top:0; }
-.content-surface { max-width:1200px; }
+.content-surface { max-width:none; width:100%; }
 
 /* Ensure no horizontal overflow glitches */
 html, body { overflow-x:hidden; }

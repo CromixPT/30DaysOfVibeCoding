@@ -1,0 +1,108 @@
+@using MoodTracker.Services
+@inherits ComponentBase
+@namespace MoodTracker.Components.Charts
+
+@* Top Emotions Chart
+   - Horizontal bar chart showing most frequent non-empty Emotion values in the filtered entries.
+   - Limits to Top N (default 6) for clarity inside compact card.
+   - Accessible: each bar has aria-label + hidden text; legend-like labels inline.
+*@
+
+<div class="top-emotions chart-wrapper">
+    @if (emotionStats.Count == 0)
+    {
+        <div class="empty-note">No emotion tags.</div>
+    }
+    else
+    {
+        <svg class="emotion-svg" role="img" aria-labelledby="topEmotionsTitle topEmotionsDesc" focusable="false"
+             viewBox="0 0 @SvgWidth @SvgHeight" preserveAspectRatio="none">
+            <title id="topEmotionsTitle">Top emotions frequency chart</title>
+            <desc id="topEmotionsDesc">Horizontal bars showing the most frequent emotion tags and their counts.</desc>
+            @foreach (var bar in svgBars)
+            {
+                <g class="bar-group" transform="translate(0,@bar.Y)" aria-label="@bar.Stat.Emotion: @bar.Stat.Count entries (@bar.Stat.Percent.ToString("0.0"))%">
+                    <rect class="bar-bg" x="@LeftPad" y="0" width="@(ChartInnerWidth)" height="@BarHeight" rx="4" ry="4" />
+                    <rect class="bar-fill" x="@LeftPad" y="0" width="@bar.Width" height="@BarHeight" fill="@bar.Stat.Color" rx="4" ry="4">
+                        <title>@bar.Stat.Emotion (@bar.Stat.Count) - @bar.Stat.Percent.ToString("0.0")%</title>
+                    </rect>
+                    @((MarkupString)$"<text class='label' x='4' y='{BarHeight/2 + 4}'>{bar.Stat.Emotion}</text>")
+                    @((MarkupString)$"<text class='value' x='{LeftPad + bar.Width + 6}' y='{BarHeight/2 + 4}'>{bar.Stat.Count}</text>")
+                </g>
+            }
+            <!-- axis ticks (0%, 50%, 100%) -->
+            <g class="ticks">
+                <line x1="@LeftPad" y1="@SvgHeight" x2="@LeftPad" y2="0" class="axis-line" />
+                @for (int p = 0; p <= 100; p += 50)
+                {
+                    var x = LeftPad + (ChartInnerWidth * (p/100.0));
+                    <line x1="@x" y1="@SvgHeight" x2="@x" y2="@(-4)" class="tick" />
+                    @((MarkupString)$"<text class='tick-label' x='{x}' y='{SvgHeightPlusLabel}' text-anchor='middle'>{p}%</text>")
+                }
+            </g>
+        </svg>
+    }
+</div>
+
+@code {
+    [Parameter] public IEnumerable<MoodEntry> Entries { get; set; } = Enumerable.Empty<MoodEntry>();
+    [Parameter] public int Top { get; set; } = 6;
+
+    private readonly List<EmotionStat> emotionStats = new();
+    private readonly List<SvgBar> svgBars = new();
+
+    // Layout constants for SVG (in arbitrary units mapped by viewBox)
+    private const int LeftPad = 80; // space for labels
+    private const int RightPad = 12;
+    private const int TopPad = 4;
+    private const int BarGap = 10;
+    private const int BarHeight = 18;
+    private const int BottomPad = 26; // space for tick labels
+    private int SvgWidth => 400;
+    private int ChartInnerWidth => SvgWidth - LeftPad - RightPad;
+    private int SvgHeight => TopPad + (emotionStats.Count * BarHeight) + ((emotionStats.Count - 1) * BarGap);
+    private int SvgHeightPlusLabel => SvgHeight + 12;
+
+    protected override void OnParametersSet()
+    {
+        emotionStats.Clear();
+        svgBars.Clear();
+        var groups = Entries
+            .Where(e => !string.IsNullOrWhiteSpace(e.Emotion))
+            .GroupBy(e => e.Emotion!.Trim())
+            .Select(g => new { Emotion = g.Key, Count = g.Count() })
+            .OrderByDescending(g => g.Count)
+            .ThenBy(g => g.Emotion)
+            .Take(Top)
+            .ToList();
+        if (groups.Count == 0) return;
+        var max = groups.Max(g => g.Count);
+        var total = groups.Sum(g => g.Count);
+        foreach (var (g, idx) in groups.Select((g,i)=>(g,i)))
+        {
+            var stat = new EmotionStat(
+                g.Emotion,
+                g.Count,
+                (g.Count / (double)total) * 100,
+                (g.Count / (double)max) * 100,
+                ColorForKey(g.Emotion)
+            );
+            emotionStats.Add(stat);
+            var width = (int)Math.Round(ChartInnerWidth * (stat.RelativePercent / 100.0));
+            var y = TopPad + idx * (BarHeight + BarGap);
+            svgBars.Add(new SvgBar(stat, width, y));
+        }
+    }
+
+    private static string ColorForKey(string key)
+    {
+        int hash = 23;
+        foreach (var c in key)
+            hash = hash * 31 + c;
+        var hue = (hash % 360 + 360) % 360;
+        return $"hsl({hue},55%,60%)";
+    }
+
+    private sealed record EmotionStat(string Emotion, int Count, double Percent, double RelativePercent, string Color);
+    private sealed record SvgBar(EmotionStat Stat, int Width, int Y);
+}

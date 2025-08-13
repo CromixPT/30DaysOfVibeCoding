@@ -1,0 +1,106 @@
+@using MoodTracker.Services
+@inherits ComponentBase
+@namespace MoodTracker.Components.Charts
+
+@* Pie / donut style distribution chart rendered via SVG without external JS libs.
+   Design choices:
+   - Pure server-rendered SVG keeps bundle small and avoids adding/maintaining a JS chart dependency.
+   - Deterministic HSL color generated from MoodKey for consistent color identity across sessions.
+   - Accessible: role="img" with aria-label + textual legend (screen-reader friendly) and percentages.
+   - Responsive: flex layout allows legend to wrap beneath on narrow widths.
+*@
+
+<div class="mood-dist pie-container">
+    @if (total == 0)
+    {
+        <div class="empty-note">No entries in current selection.</div>
+    }
+    else
+    {
+        <svg class="pie-svg" viewBox="0 0 220 220" role="img" aria-label="Mood distribution chart">
+            <title>Mood distribution</title>
+            <g transform="translate(110,110)">
+                @foreach (var s in slices)
+                {
+                    <path d="@s.Path" fill="@s.Color" stroke="#ffffff" stroke-width="1" >
+                        <title>@s.Label (@s.Percentage.ToString("0.0"))%</title>
+                    </path>
+                }
+            </g>
+        </svg>
+        <div class="legend" aria-label="Chart legend">
+            @foreach (var s in slices.OrderByDescending(x => x.Count))
+            {
+                <div class="legend-item">
+                    <span class="legend-swatch" style="background:@s.Color"></span>
+                    <span class="legend-text"><strong>@s.Label</strong> @s.Count (@s.Percentage.ToString("0.0"))%</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IEnumerable<MoodEntry> Entries { get; set; } = Enumerable.Empty<MoodEntry>();
+
+    private int total;
+    private readonly List<Slice> slices = new();
+
+    protected override void OnParametersSet()
+    {
+        slices.Clear();
+        var groups = Entries
+            .GroupBy(e => new { e.MoodKey, e.MoodName, e.Emoji })
+            .OrderByDescending(g => g.Count())
+            .ToList();
+        total = groups.Sum(g => g.Count());
+        if (total == 0)
+        {
+            return;
+        }
+
+        double startAngle = -90; // start at top (12 o'clock)
+        foreach (var g in groups)
+        {
+            var count = g.Count();
+            var percent = (count / (double)total) * 100.0;
+            var sweep = 360 * count / (double)total;
+            var endAngle = startAngle + sweep;
+            var path = BuildWedgePath(startAngle, endAngle, 100); // radius 100 inside 220 viewBox (padding)
+            slices.Add(new Slice(
+                g.Key.MoodKey,
+                $"{g.Key.MoodName} {g.Key.Emoji}",
+                count,
+                percent,
+                path,
+                ColorForKey(g.Key.MoodKey)));
+            startAngle = endAngle;
+        }
+    }
+
+    private static string BuildWedgePath(double startDeg, double endDeg, double r)
+    {
+        double toRad(double d) => Math.PI * d / 180.0;
+        var sRad = toRad(startDeg);
+        var eRad = toRad(endDeg);
+        var x1 = r * Math.Cos(sRad);
+        var y1 = r * Math.Sin(sRad);
+        var x2 = r * Math.Cos(eRad);
+        var y2 = r * Math.Sin(eRad);
+        var largeArc = (endDeg - startDeg) > 180 ? 1 : 0;
+        return $"M 0 0 L {x1:F3} {y1:F3} A {r} {r} 0 {largeArc} 1 {x2:F3} {y2:F3} Z";
+    }
+
+    private static string ColorForKey(string key)
+    {
+        int hash = 17;
+        foreach (var c in key)
+        {
+            hash = hash * 31 + c;
+        }
+        var hue = (hash % 360 + 360) % 360;
+        return $"hsl({hue},65%,58%)";
+    }
+
+    private sealed record Slice(string Key, string Label, int Count, double Percentage, string Path, string Color);
+}

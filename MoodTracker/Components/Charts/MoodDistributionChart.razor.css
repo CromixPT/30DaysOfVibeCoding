@@ -1,0 +1,7 @@
+.mood-dist.pie-container { display:flex; gap:1.1rem; flex-wrap:wrap; align-items:center; justify-content:center; }
+.pie-svg { width:220px; height:220px; flex:0 0 auto; }
+.legend { display:flex; flex-direction:column; gap:.35rem; max-width:200px; }
+.legend-item { display:flex; align-items:center; gap:.55rem; font-size:.65rem; line-height:1.15; }
+.legend-swatch { width:14px; height:14px; border-radius:4px; box-shadow:0 0 0 1px #ffffff, 0 0 0 1px rgba(0,0,0,.06); }
+.legend-text strong { font-weight:600; }
+.empty-note { font-size:.7rem; font-style:italic; color:#6b747d; padding:.4rem .6rem; background:#f5f7f9; border:1px dashed #d8dde2; border-radius:.5rem; }

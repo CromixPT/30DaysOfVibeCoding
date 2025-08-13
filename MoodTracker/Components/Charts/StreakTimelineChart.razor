@@ -1,0 +1,53 @@
+@using MoodTracker.Services
+@inherits ComponentBase
+@namespace MoodTracker.Components.Charts
+
+@* Streak Timeline Chart
+   - Shows presence of entries for each day in the selected period (default 30 days) from oldest (left) to today (right).
+   - Highlights current streak segment (consecutive days ending today).
+   - Accessible: each day square has aria-label with date and status.
+*@
+
+<div class="streak-timeline chart-wrapper" role="img" aria-label="Daily entry streak timeline">
+    <div class="day-row">
+        @foreach (var d in days)
+        {
+            var css = $"day {(d.HasEntry ? (d.InStreak ? "streak" : "filled") : "empty")}";
+            <div class="@css" title="@d.Date.ToString("MMM d") - @(d.HasEntry?"Entry":"No Entry")" aria-label="@d.Date.ToString("yyyy-MM-dd") @(d.HasEntry? (d.InStreak?"(streak)":"(entry)"):"(no entry)")"></div>
+        }
+    </div>
+    <div class="legend" aria-label="Legend">
+        <span class="swatch streak"></span><span class="leg-label">Streak</span>
+        <span class="swatch filled"></span><span class="leg-label">Entry</span>
+        <span class="swatch empty"></span><span class="leg-label">None</span>
+    </div>
+</div>
+
+@code {
+    [Parameter] public IEnumerable<MoodEntry> Entries { get; set; } = Enumerable.Empty<MoodEntry>();
+    [Parameter] public int PeriodDays { get; set; } = 30;
+
+    private readonly List<DayCell> days = new();
+
+    protected override void OnParametersSet()
+    {
+        days.Clear();
+        var now = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(now);
+        var start = today.AddDays(-PeriodDays + 1);
+        var set = new HashSet<DateOnly>(Entries.Select(e => DateOnly.FromDateTime(e.TimestampUtc)));
+        // Determine streak: consecutive days ending today with entries.
+        int streak = 0; var cursor = today;
+        while (set.Contains(cursor)) { streak++; cursor = cursor.AddDays(-1); }
+        var streakDates = new HashSet<DateOnly>();
+        cursor = today;
+        for (int i = 0; i < streak; i++) { streakDates.Add(cursor); cursor = cursor.AddDays(-1); }
+        for (var d = start; d <= today; d = d.AddDays(1))
+        {
+            var has = set.Contains(d);
+            days.Add(new DayCell(d, has, has && streakDates.Contains(d)));
+        }
+    }
+
+    private sealed record DayCell(DateOnly Date, bool HasEntry, bool InStreak);
+}
