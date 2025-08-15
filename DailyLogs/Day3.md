@@ -35,11 +35,11 @@ Copilot got it almost right on the first try; it even enforced a query filter:
 
 I said “almost,” because I did not like that it had placed everything in a Services folder.
 
-![image.png](images/day3-image.png)
+![image.png](images/day3-services_folder.png)
 
 So I asked for them to be moved.
 
-![image.png](images/day3-image%201.png)
+![image.png](images/day3-refactor-prompt.png)
 
 A human usually does this via drag-and-drop. AI does not; it writes new files with new namespaces, creates namespace chaos, and struggles to remove the old files.
 
@@ -55,7 +55,7 @@ internal static class EfRepositoryPlaceholder { }
 
 On the third time I requested it:
 
-![image.png](images/day3-image%202.png)
+![image.png](images/day3-refactor-chaos.png)
 
 **💡 Learning moment: Delete them yourself!**
 
@@ -120,15 +120,15 @@ From here on, it was a series of small-step instructions and refinements, and us
 
 **💡 Again, smaller instructions worked better than big requests**
 
-![image.png](images/day3-image%203.png)
+![image.png](images/day3-dashboard-preview.png)
 
 What I liked most was that each chart was built as its own component, providing reusability and modularity.
 
-![alt text](images/day3-image5.png)
+![alt text](images/day3-chart_components.png)
 
 At the same time, what I disliked most was that it custom-built the chart implementations instead of using a library. But I never asked for that, so it stuck to the instructions.
 
-![image.png](images/day3-image%204.png)
+![image.png](images/day3-chart-code.png)
 
 This wraps it up for today, and honestly, I will wrap up this mood tracker too.
 
